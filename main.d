@@ -12,6 +12,7 @@ import std.random ;
 import std.process ;
 import std.string ;
 import std.c.stdlib : exit ;
+import core.stdc.ctype ;
 //import std.algorithm, std.range, std.array ;
 
 import plugin_init, plugin_math, plugin_list_comprehension ;
@@ -53,7 +54,7 @@ l_main_loop :
     {
         bool skipSimpleString ()
         {
-            if (i == n)
+            if (i >= n)
                 return false ;
             int c = s [i] ;
             if (c != '\'' && c != '"' && c != '`')
@@ -123,7 +124,7 @@ l_main_loop :
 
         bool skipSpace ()
         {
-            if (i == n)
+            if (i >= n)
                 return false ;
             int c = s [i] ;
             int j = i ;
@@ -231,10 +232,93 @@ l_main_loop :
         //skipEmptyAndCommentAndString () ;
         skipEmptyAndComment () ;
 
-        if (i == n)
+        if (i >= n)
             //continue ;
             break ;
         int c = s [i] ;
+        if (c == '@')
+        {
+            int pos = i ;
+            ++i ;
+            if (! skipString ())
+            {
+                --i ;
+                goto l_next_rule ;
+            }
+
+            //found string
+            string str = s [pos..i] ;
+            string result ;
+            result.reserve (str.length) ;
+
+            char postfix = 0 ;
+            if (i<n && s[i]=='c' || s[i]=='w' || s[i]=='d')
+                postfix = s[i] ;
+            string strOpen ;
+            string strClose ;
+
+            sizediff_t startPos ;
+            if (s[pos] == 'q')
+            {
+                strOpen = "q{" ;
+                strClose = "}" ;
+                startPos = 3 ;
+            }
+            else
+            {
+                strOpen ~= s [pos+1] ;
+                strClose = strOpen ;
+                startPos = 2 ;
+            }
+
+            if (postfix)
+            {
+                strClose ~= postfix ;
+            }
+
+            //result ~= strOpen~strClose ;
+            for (int j=startPos ; j<str.length-1; ++j)
+            {
+                if (str [j]=='$' && isalpha(str[j+1]))
+                {
+                    int namePos = j ;
+                    do
+                    {
+                        ++j ;
+                    }
+                    while (j<str.length && isalnum(str[j])) ;
+                    string name = str [namePos..j] ;
+                    if (result.length != 0)
+                        result ~= "~" ;
+                    result ~= strOpen~str [startPos..namePos]~strClose~"~to!string("~str[namePos+1..j]~")" ;
+                    startPos = j ;
+                    --j ;
+                    continue ;
+                }
+                if (str [j]=='$' && str [j+1] == ';')
+                {
+                    if (result.length != 0)
+                        result ~= "~" ;
+                    result ~= strOpen~str [startPos..j+1]~strClose ;
+                    ++j ;
+                    startPos = j+1 ;
+                    continue ;
+                }
+                //TODO: find matching parenthesis
+                if (str [j]=='$' && str[j+1]=='(')
+                {
+
+                }
+            }
+            if (result.length != 0)
+                result ~= "~" ;
+            result ~= strOpen~str [startPos..str.length-1]~strClose ;
+            isChanged = true ;
+            outCode ~= s [startIdx .. pos] ~ result ;
+            startIdx = i ;
+            continue l_main_loop ;
+        }
+l_next_rule : ;
         if (isFirstNameChar (c))
         {
             if (!inPhrase)
@@ -303,6 +387,7 @@ l_main_loop :
                     }
 
                     outCode ~= s [startIdx .. endIdx] ;
+                    startIdx = i ;
                     isChanged = true ;
 
                     string textIn = s [textStart .. i-1] ;
@@ -324,7 +409,6 @@ l_main_loop :
                         newLines ~= "\n" ;
                     textOut = textOut.replace ("\n", " ").replace("\r", "") ;
                     outCode ~= textOut ~ newLines ;
-                    startIdx = i ;
                     continue l_main_loop ;
                 }
             }

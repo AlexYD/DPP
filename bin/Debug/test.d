@@ -51,7 +51,9 @@ void main ()
 	assert (f!{a.x * b.y - b.x*a.y}(Point(1, 1), Point(2, 2)) ==
 		binaryFun!q{a.x * b.y - b.x*a.y}(Point(1, 1), Point(2, 2)) ) ;
 	/******************************************/
+	writeln(@"123");
+	writeln(@"@a= $a ***") ;
 
-
+	/******************************************/
 	writeln ("All tests passed") ;
 }
