@@ -1,3 +1,4 @@
+// usage dpp.exe test.d
 import std.stdio, std.conv, std.string, std.array, std.functional ;
 void main ()
 {                       
@@ -52,7 +53,7 @@ void main ()
 		binaryFun!q{a.x * b.y - b.x*a.y}(Point(1, 1), Point(2, 2)) ) ;
 	/******************************************/
 	writeln(@"123");
-	writeln(@"@a= $a ***") ;
+	writeln(@"a= $a ***") ;
 
 	/******************************************/
 	writeln ("All tests passed") ;
